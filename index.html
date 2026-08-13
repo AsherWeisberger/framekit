@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Framekit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='20' rx='3' fill='none' stroke='%23E8A317' stroke-width='2'/%3E%3Crect x='8' y='10' width='16' height='12' rx='1.5' fill='%23E8A317' opacity='.35'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="name">Framekit</span>
+      </div>
+      <button type="button" class="ghost" id="openBtn">Open</button>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+    </header>
+
+    <div class="main">
+      <section class="stage" id="stage" tabindex="0">
+        <div class="empty" id="empty">
+          <p>Paste or drop a screenshot</p>
+          <span class="hint" id="pasteHint">⌘V</span>
+        </div>
+        <canvas id="canvas" hidden></canvas>
+      </section>
+
+      <aside class="rail" id="rail">
+        <section class="block">
+          <h2>Background</h2>
+          <div class="swatches" id="swatches" role="list"></div>
+          <label class="hex-row">
+            <span>Hex</span>
+            <input type="text" id="hexInput" spellcheck="false" maxlength="7" value="#1B1F3A" autocomplete="off">
+          </label>
+        </section>
+
+        <section class="block">
+          <h2>Frame</h2>
+          <label class="slider">
+            <span class="slider-meta"><span>Padding</span><span class="val" id="padVal">48</span></span>
+            <input type="range" id="pad" min="8" max="160" value="48">
+          </label>
+          <label class="slider">
+            <span class="slider-meta"><span>Radius</span><span class="val" id="radVal">16</span></span>
+            <input type="range" id="rad" min="0" max="64" value="16">
+          </label>
+          <label class="slider">
+            <span class="slider-meta"><span>Shadow</span><span class="val" id="shadVal">24</span></span>
+            <input type="range" id="shad" min="0" max="80" value="24">
+          </label>
+        </section>
+
+        <section class="block">
+          <h2>Window</h2>
+          <label class="switch">
+            <input type="checkbox" id="chromeToggle" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span>Chrome</span>
+          </label>
+          <label class="title-row">
+            <span>Title</span>
+            <input type="text" id="titleInput" maxlength="80" placeholder="Untitled" autocomplete="off">
+          </label>
+        </section>
+
+        <section class="block export">
+          <h2>Export</h2>
+          <div class="actions">
+            <button type="button" class="primary" id="downloadBtn" disabled>Download PNG</button>
+            <button type="button" class="secondary" id="copyBtn" disabled>Copy</button>
+          </div>
+          <p class="status" id="status" hidden></p>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
