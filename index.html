@@ -28,6 +28,7 @@
           <span class="hint" id="pasteHint">⌘V</span>
         </div>
         <canvas id="canvas" hidden></canvas>
+        <div class="ocr-layer is-off" id="ocrLayer" hidden></div>
       </section>
 
       <aside class="rail" id="rail">
@@ -41,7 +42,10 @@
         </section>
 
         <section class="block">
-          <h2>Frame</h2>
+          <div class="block-head">
+            <h2>Frame</h2>
+            <button type="button" class="auto-btn" id="autoBtn" disabled>Auto</button>
+          </div>
           <label class="slider">
             <span class="slider-meta"><span>Padding</span><span class="val" id="padVal">48</span></span>
             <input type="range" id="pad" min="8" max="160" value="48">
@@ -67,6 +71,26 @@
             <span>Title</span>
             <input type="text" id="titleInput" maxlength="80" placeholder="Untitled" autocomplete="off">
           </label>
+        </section>
+
+        <section class="block">
+          <h2>Text</h2>
+          <p class="quiet" id="ocrStatus">Drop a shot to read text</p>
+          <button type="button" class="secondary compact" id="copyTextBtn" disabled>Copy text</button>
+        </section>
+
+        <section class="block">
+          <h2>Redact</h2>
+          <label class="switch">
+            <input type="checkbox" id="autoRedactToggle">
+            <span class="track" aria-hidden="true"></span>
+            <span>Redact emails</span>
+          </label>
+          <p class="quiet" id="redactCount">No marks</p>
+          <div class="split">
+            <button type="button" class="secondary compact" id="redactToolBtn" disabled>Redact</button>
+            <button type="button" class="secondary compact" id="clearRedactBtn" disabled>Clear</button>
+          </div>
         </section>
 
         <section class="block export">
