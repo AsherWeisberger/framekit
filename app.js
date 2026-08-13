@@ -541,15 +541,17 @@
     });
     for (let i = 0; i < words.length; i++) {
       if (!words[i].text.includes("@")) continue;
-      const nearby = [i];
-      if (words[i + 1]) nearby.push(i + 1);
-      if (words[i + 2]) nearby.push(i + 2);
-      const joined = nearby.map((k) => words[k].text).join("");
+      const used = [i];
       EMAIL_RE.lastIndex = 0;
-      if (EMAIL_RE.test(joined) || /@/.test(words[i].text)) {
-        const box = unionBox(words, nearby, 4, 3);
-        if (box) { box.kind = "email"; bars.push(box); }
+      const selfHit = EMAIL_RE.test(words[i].text);
+      if (!selfHit && words[i + 1]) {
+        const pair = words[i].text + words[i + 1].text;
+        const pairSp = words[i].text + " " + words[i + 1].text;
+        EMAIL_RE.lastIndex = 0;
+        if (EMAIL_RE.test(pair) || EMAIL_RE.test(pairSp)) used.push(i + 1);
       }
+      const box = unionBox(words, used, 4, 3);
+      if (box) { box.kind = "email"; bars.push(box); }
     }
     return bars;
   }
@@ -1137,7 +1139,7 @@
     applyOcrWords([
       { text: "maya@studio.local", bbox: { x0: 996, y0: 184, x1: 1188, y1: 202 } },
       { text: "+1 415-555-0142", bbox: { x0: 996, y0: 206, x1: 1170, y1: 224 } },
-      { text: "sk-live_framekit_9f3a2c", bbox: { x0: 500, y0: 400, x1: 760, y1: 418 } },
+      { text: "sk-live_framekit_9f3a2c", bbox: { x0: 620, y0: 398, x1: 820, y1: 416 } },
     ]);
     state.autoRedactOn = true;
     els.autoRedactToggle.checked = true;
