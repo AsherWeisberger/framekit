@@ -1,6 +1,8 @@
 proof-*.png
+proof-*.json
 test-source.png
 export-proof.py
+export-proof-v2.py
 make_test_source.py
 *.zip
 .DS_Store

@@ -287,7 +287,7 @@
 
   function pickBackground(analysis) {
     const darkIds = ["ink", "midnight", "void", "coal", "ember", "indigo", "obsidian"];
-    const lightIds = ["paper", "sand", "bone", "fog", "linen", "dusk", "wine"];
+    const lightIds = ["paper", "sand", "bone", "fog", "linen", "cream", "chalk"];
     const midIds = ["ink", "pine", "dusk", "bone", "steel"];
     let ids = midIds;
     if (analysis.luma > 0.55) ids = darkIds;
@@ -413,9 +413,9 @@
     return list;
   }
 
-  function draw() {
+  function frameLayout() {
     const img = state.image;
-    if (!img) return;
+    if (!img) return null;
     const p = pad();
     const r = rad();
     const s = shad();
@@ -425,18 +425,31 @@
     const ih = img.naturalHeight || img.height;
     const cardW = iw;
     const cardH = ih + bar;
-    const W = cardW + p * 2;
-    const H = cardH + p * 2;
+    const offsetY = s > 0 ? Math.round(s * 0.32) : 0;
+    const bleed = s > 0 ? Math.ceil(s * 1.2) : 0;
+    const mx = Math.max(p, bleed);
+    const myTop = Math.max(p, bleed);
+    const myBot = Math.max(p, bleed + offsetY);
+    return {
+      p, r, s, useChrome, bar, iw, ih, cardW, cardH, offsetY,
+      mx, myTop, myBot, x: mx, y: myTop,
+      W: cardW + mx * 2, H: cardH + myTop + myBot,
+    };
+  }
+
+  function draw() {
+    const img = state.image;
+    if (!img) return;
+    const L = frameLayout();
+    const { r, s, useChrome, bar, iw, ih, cardW, cardH, offsetY, x, y, W, H } = L;
     els.canvas.width = W;
     els.canvas.height = H;
     fillBackground(ctx, W, H, currentFill());
-    const x = p;
-    const y = p;
     if (s > 0) {
       ctx.save();
       ctx.shadowColor = "rgba(0,0,0,0.55)";
       ctx.shadowBlur = s;
-      ctx.shadowOffsetY = Math.round(s * 0.32);
+      ctx.shadowOffsetY = offsetY;
       ctx.shadowOffsetX = 0;
       ctx.fillStyle = "rgba(0,0,0,0.88)";
       roundRectPath(ctx, x, y, cardW, cardH, r);
@@ -533,25 +546,34 @@
       text += w.text;
     });
     const bars = [];
+    const covered = new Set();
     findSensitiveText(text).forEach((hit) => {
       const idxs = new Set();
       for (let i = hit.start; i < hit.end; i++) if (map[i] >= 0) idxs.add(map[i]);
+      idxs.forEach((i) => covered.add(i));
       const box = unionBox(words, idxs, 4, 3);
       if (box) { box.kind = hit.kind; bars.push(box); }
     });
     for (let i = 0; i < words.length; i++) {
       if (!words[i].text.includes("@")) continue;
+      if (covered.has(i)) continue;
       const used = [i];
       EMAIL_RE.lastIndex = 0;
       const selfHit = EMAIL_RE.test(words[i].text);
-      if (!selfHit && words[i + 1]) {
+      if (!selfHit && words[i + 1] && !covered.has(i + 1)) {
         const pair = words[i].text + words[i + 1].text;
         const pairSp = words[i].text + " " + words[i + 1].text;
         EMAIL_RE.lastIndex = 0;
-        if (EMAIL_RE.test(pair) || EMAIL_RE.test(pairSp)) used.push(i + 1);
+        const pairHit = EMAIL_RE.test(pair);
+        EMAIL_RE.lastIndex = 0;
+        if (pairHit || EMAIL_RE.test(pairSp)) used.push(i + 1);
       }
       const box = unionBox(words, used, 4, 3);
-      if (box) { box.kind = "email"; bars.push(box); }
+      if (box) {
+        box.kind = "email";
+        bars.push(box);
+        used.forEach((u) => covered.add(u));
+      }
     }
     return bars;
   }
@@ -633,14 +655,20 @@
     const gen = ++state.ocrGen;
     setOcrStatus("Reading text…");
     els.copyTextBtn.disabled = true;
+    const timer = setTimeout(() => {
+      if (gen !== state.ocrGen) return;
+      if (!state.ocrWords) setOcrStatus("Text unread");
+    }, 25000);
     getWorker().then((worker) => {
       if (gen !== state.ocrGen) return null;
       return worker.recognize(img);
     }).then((res) => {
+      clearTimeout(timer);
       if (gen !== state.ocrGen || !res) return;
       const words = (res.data && res.data.words) || [];
       applyOcrWords(words.filter((w) => w.confidence == null || w.confidence > 35));
     }).catch(() => {
+      clearTimeout(timer);
       if (gen !== state.ocrGen) return;
       setOcrStatus("Text unread");
     });
@@ -682,12 +710,11 @@
     const canvasRect = canvas.getBoundingClientRect();
     if (!canvasRect.width || !canvas.width) return;
     const scale = canvasRect.width / canvas.width;
-    const p = pad();
-    const bar = chromeOn() ? CHROME_H : 0;
-    const iw = img.naturalWidth || img.width;
-    const ih = img.naturalHeight || img.height;
-    layer.style.left = (canvasRect.left - stageRect.left + p * scale) + "px";
-    layer.style.top = (canvasRect.top - stageRect.top + (p + bar) * scale) + "px";
+    const L = frameLayout();
+    if (!L) return;
+    const { bar, iw, ih, x, y } = L;
+    layer.style.left = (canvasRect.left - stageRect.left + x * scale) + "px";
+    layer.style.top = (canvasRect.top - stageRect.top + (y + bar) * scale) + "px";
     layer.style.width = (iw * scale) + "px";
     layer.style.height = (ih * scale) + "px";
     const scaleY = (ih * scale) / ih;
@@ -717,12 +744,11 @@
     const scaleY = els.canvas.height / rect.height;
     const cx = (e.clientX - rect.left) * scaleX;
     const cy = (e.clientY - rect.top) * scaleY;
-    const p = pad();
-    const bar = chromeOn() ? CHROME_H : 0;
-    const iw = img.naturalWidth || img.width;
-    const ih = img.naturalHeight || img.height;
-    const x = cx - p;
-    const y = cy - p - bar;
+    const L = frameLayout();
+    if (!L) return null;
+    const { bar, iw, ih, x: ox, y: oy } = L;
+    const x = cx - ox;
+    const y = cy - oy - bar;
     return { x, y, iw, ih, inside: x >= 0 && y >= 0 && x <= iw && y <= ih };
   }
 
@@ -748,21 +774,24 @@
     updateRedactCount();
     scheduleDraw();
   }
-  const drag = { on: false, x0: 0, y0: 0, moved: false };
+  const drag = { on: false, x0: 0, y0: 0, moved: false, pointerId: null };
 
   function onRedactDown(e) {
     if (!state.redactTool || !state.image) return;
-    if (e.button !== 0) return;
+    if (e.isPrimary === false) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     const pt = eventToImage(e);
     if (!pt || !pt.inside) return;
     e.preventDefault();
-    drag.on = true; drag.x0 = pt.x; drag.y0 = pt.y; drag.moved = false;
+    try { els.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    drag.on = true; drag.x0 = pt.x; drag.y0 = pt.y; drag.moved = false; drag.pointerId = e.pointerId;
     state.draftBar = { x: pt.x, y: pt.y, w: 1, h: 1, kind: "draft" };
     scheduleDraw();
   }
 
   function onRedactMove(e) {
     if (!drag.on) return;
+    if (drag.pointerId != null && e.pointerId !== drag.pointerId) return;
     const pt = eventToImage(e);
     if (!pt) return;
     const x = Math.min(drag.x0, pt.x);
@@ -776,7 +805,9 @@
 
   function onRedactUp(e) {
     if (!drag.on) return;
-    drag.on = false;
+    if (drag.pointerId != null && e.pointerId !== drag.pointerId) return;
+    try { els.canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+    drag.on = false; drag.pointerId = null;
     const draft = state.draftBar;
     state.draftBar = null;
     const pt = eventToImage(e) || { x: drag.x0, y: drag.y0 };
@@ -822,8 +853,14 @@
     updateRedactCount();
   }
 
+  function isImageFile(file) {
+    if (!file) return false;
+    if (String(file.type || "").startsWith("image/")) return true;
+    return /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name || "");
+  }
+
   function loadFile(file) {
-    if (!file || !String(file.type || "").startsWith("image/")) return Promise.resolve(false);
+    if (!isImageFile(file)) return Promise.resolve(false);
     return new Promise((resolve) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -982,9 +1019,10 @@
   });
   els.clearRedactBtn.addEventListener("click", clearManualRedact);
 
-  els.canvas.addEventListener("mousedown", onRedactDown);
-  window.addEventListener("mousemove", onRedactMove);
-  window.addEventListener("mouseup", onRedactUp);
+  els.canvas.addEventListener("pointerdown", onRedactDown);
+  window.addEventListener("pointermove", onRedactMove);
+  window.addEventListener("pointerup", onRedactUp);
+  window.addEventListener("pointercancel", onRedactUp);
   els.openBtn.addEventListener("click", () => els.fileInput.click());
   els.stage.addEventListener("click", (e) => {
     if (e.target.closest("canvas") || e.target.closest(".ocr-layer")) return;
@@ -1016,13 +1054,15 @@
   });
 
   window.addEventListener("paste", (e) => {
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
     const cd = e.clipboardData;
     if (!cd) return;
     const items = cd.items ? Array.from(cd.items) : [];
     const imgItem = items.find((it) => it.type && it.type.startsWith("image/"));
     if (imgItem) { e.preventDefault(); loadFile(imgItem.getAsFile()); return; }
     const files = cd.files ? Array.from(cd.files) : [];
-    const imgFile = files.find((f) => f.type && f.type.startsWith("image/"));
+    const imgFile = files.find((f) => isImageFile(f));
     if (imgFile) { e.preventDefault(); loadFile(imgFile); }
   });
 

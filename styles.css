@@ -461,7 +461,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .stage.is-redact,
-.stage.is-redact canvas { cursor: crosshair; }
+.stage.is-redact canvas { cursor: crosshair; touch-action: none; }
 
 .ocr-layer {
   position: absolute;
