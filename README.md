@@ -2,6 +2,10 @@
 
 A local screenshot stager: paste or drop a raw capture, get a padded, shadowed, gradient-backed PNG ready to post. No account, no watermark, no API keys.
 
+Made by [Asher Weisberger](https://x.com/AsherWeisberger) ([@AsherWeisberger](https://x.com/AsherWeisberger))
+
+Live: https://asherweisberger.github.io/framekit/
+
 Auto-balance picks padding, radius, shadow, and a contrasting studio background. Twenty-four backgrounds (plus palettes sampled from the shot). In-browser OCR lets you select and copy text. Redact emails, phones, and tokens automatically, or paint bars by hand. Redact marks export; the text overlay does not.
 
 Framekit is an original tool and is not affiliated with Xnapper or any commercial screenshot app.
@@ -30,4 +34,4 @@ OCR uses Tesseract.js from jsDelivr in the browser. If it fails, framing and exp
 
 ## License
 
-MIT. Copyright 2026 Asher Weisberger.
+MIT. Copyright 2026 Asher Weisberger ([@AsherWeisberger](https://x.com/AsherWeisberger)).
