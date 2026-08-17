@@ -55,6 +55,8 @@
     pasteHint: document.getElementById("pasteHint"),
     autoBtn: document.getElementById("autoBtn"),
     ocrStatus: document.getElementById("ocrStatus"),
+    ocrOrb: document.getElementById("ocrOrb"),
+    stageOrb: document.getElementById("stageOrb"),
     copyTextBtn: document.getElementById("copyTextBtn"),
     autoRedactToggle: document.getElementById("autoRedactToggle"),
     redactCount: document.getElementById("redactCount"),
@@ -650,14 +652,56 @@
     scheduleDraw();
     return cleaned;
   }
+
+  var kitOrbRail = null;
+  var kitOrbStage = null;
+  var kitOrbTimer = 0;
+  function mountOrb(host, handle, label, state) {
+    if (!window.KitOrb || !host) return handle;
+    if (!handle) {
+      host.hidden = false;
+      host.innerHTML = "";
+      return KitOrb.mountPill(host, { label: label, state: state || "searching", theme: "dark" });
+    }
+    host.hidden = false;
+    handle.setLabel(label);
+    handle.setState(state || "searching");
+    return handle;
+  }
+  function showKitOrb(label, state) {
+    if (kitOrbTimer) { clearTimeout(kitOrbTimer); kitOrbTimer = 0; }
+    kitOrbRail = mountOrb(els.ocrOrb, kitOrbRail, label, state);
+    kitOrbStage = mountOrb(els.stageOrb, kitOrbStage, label, state);
+    if (els.ocrStatus) els.ocrStatus.hidden = true;
+  }
+  function hideKitOrb() {
+    if (kitOrbTimer) { clearTimeout(kitOrbTimer); kitOrbTimer = 0; }
+    if (kitOrbRail) { kitOrbRail.destroy(); kitOrbRail = null; }
+    if (kitOrbStage) { kitOrbStage.destroy(); kitOrbStage = null; }
+    if (els.ocrOrb) { els.ocrOrb.hidden = true; els.ocrOrb.innerHTML = ""; }
+    if (els.stageOrb) { els.stageOrb.hidden = true; els.stageOrb.innerHTML = ""; }
+    if (els.ocrStatus) els.ocrStatus.hidden = false;
+  }
+  function showKitOrbIfSlow(label, state, ms) {
+    if (kitOrbTimer) clearTimeout(kitOrbTimer);
+    kitOrbTimer = setTimeout(function () { showKitOrb(label, state); }, ms || 90);
+    return {
+      cancel: function () {
+        if (kitOrbTimer) { clearTimeout(kitOrbTimer); kitOrbTimer = 0; }
+        hideKitOrb();
+      }
+    };
+  }
+
   function startOcr(img) {
     if (state.deferOcr) return;
     const gen = ++state.ocrGen;
     setOcrStatus("Reading text…");
+    showKitOrb("Reading text…", "searching");
     els.copyTextBtn.disabled = true;
     const timer = setTimeout(() => {
       if (gen !== state.ocrGen) return;
-      if (!state.ocrWords) setOcrStatus("Text unread");
+      if (!state.ocrWords) { hideKitOrb(); setOcrStatus("Text unread"); }
     }, 25000);
     getWorker().then((worker) => {
       if (gen !== state.ocrGen) return null;
@@ -666,10 +710,12 @@
       clearTimeout(timer);
       if (gen !== state.ocrGen || !res) return;
       const words = (res.data && res.data.words) || [];
+      hideKitOrb();
       applyOcrWords(words.filter((w) => w.confidence == null || w.confidence > 35));
     }).catch(() => {
       clearTimeout(timer);
       if (gen !== state.ocrGen) return;
+      hideKitOrb();
       setOcrStatus("Text unread");
     });
   }
@@ -1002,7 +1048,13 @@
     scheduleDraw();
   });
 
-  els.autoBtn.addEventListener("click", () => { autoBalance(); });
+  els.autoBtn.addEventListener("click", () => {
+    const slow = showKitOrbIfSlow("Balancing…", "solving", 90);
+    requestAnimationFrame(() => {
+      autoBalance();
+      slow.cancel();
+    });
+  });
   els.copyTextBtn.addEventListener("click", copyOcrText);
   els.autoRedactToggle.addEventListener("change", () => {
     state.autoRedactOn = els.autoRedactToggle.checked;
